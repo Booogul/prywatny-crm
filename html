@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System CRM - Zarządzanie Klientami</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Search, Plus, Edit, Trash2, Download, Upload, BarChart3, Calendar, DollarSign, Users, FileText, Repeat } = lucide;
+
+        const CRMSystem = () => {
+          const [activeTab, setActiveTab] = useState('clients');
+          const [clients, setClients] = useState([]);
+          const [invoices, setInvoices] = useState([]);
+          const [subscriptions, setSubscriptions] = useState([]);
+          const [searchTerm, setSearchTerm] = useState('');
+          const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+          // Modals
+          const [showClientModal, setShowClientModal] = useState(false);
+          const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+          const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+          const [editingItem, setEditingItem] = useState(null);
+
+          // Form states
+          const [clientForm, setClientForm] = useState({
+            companyName: '', contactPerson: '', phone: '', email: '', address: '', nip: '', notes: '', status: 'potential'
+          });
+          const [invoiceForm, setInvoiceForm] = useState({
+            clientId: '', type: 'sale', amount: '', date: '', description: '', month: selectedMonth
+          });
+          const [subscriptionForm, setSubscriptionForm] = useState({
+            clientId: '', description: '', amount: '', startDate: '', status: 'active'
+          });
+
+          // Load data on mount
+          useEffect(() => {
+            const savedClients = localStorage.getItem('crm_clients');
+            const savedInvoices = localStorage.getItem('crm_invoices');
+            const savedSubscriptions = localStorage.getItem('crm_subscriptions');
+            
+            if (savedClients) setClients(JSON.parse(savedClients));
+            if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
+            if (savedSubscriptions) setSubscriptions(JSON.parse(savedSubscriptions));
+          }, []);
+
+          // Save data to localStorage
+          useEffect(() => {
+            localStorage.setItem('crm_clients', JSON.stringify(clients));
+          }, [clients]);
+
+          useEffect(() => {
+            localStorage.setItem('crm_invoices', JSON.stringify(invoices));
+          }, [invoices]);
+
+          useEffect(() => {
+            localStorage.setItem('crm_subscriptions', JSON.stringify(subscriptions));
+          }, [subscriptions]);
+
+          // Client functions
+          const saveClient = () => {
+            if (editingItem) {
+              setClients(clients.map(c => c.id === editingItem.id ? { ...clientForm, id: editingItem.id } : c));
+            } else {
+              setClients([...clients, { ...clientForm, id: Date.now() }]);
+            }
+            resetClientForm();
+          };
+
+          const resetClientForm = () => {
+            setClientForm({ companyName: '', contactPerson: '', phone: '', email: '', address: '', nip: '', notes: '', status: 'potential' });
+            setShowClientModal(false);
+            setEditingItem(null);
+          };
+
+          const deleteClient = (id) => {
+            setClients(clients.filter(c => c.id !== id));
+          };
+
+          const editClient = (client) => {
+            setClientForm(client);
+            setEditingItem(client);
+            setShowClientModal(true);
+          };
+
+          // Invoice functions
+          const saveInvoice = () => {
+            if (editingItem) {
+              setInvoices(invoices.map(i => i.id === editingItem.id ? { ...invoiceForm, id: editingItem.id } : i));
+            } else {
+              setInvoices([...invoices, { ...invoiceForm, id: Date.now() }]);
+            }
+            resetInvoiceForm();
+          };
+
+          const resetInvoiceForm = () => {
+            setInvoiceForm({ clientId: '', type: 'sale', amount: '', date: '', description: '', month: selectedMonth });
+            setShowInvoiceModal(false);
+            setEditingItem(null);
+          };
+
+          const deleteInvoice = (id) => {
+            setInvoices(invoices.filter(i => i.id !== id));
+          };
+
+          const editInvoice = (invoice) => {
+            setInvoiceForm(invoice);
+            setEditingItem(invoice);
+            setShowInvoiceModal(true);
+          };
+
+          // Subscription functions
+          const saveSubscription = () => {
+            if (editingItem) {
+              setSubscriptions(subscriptions.map(s => s.id === editingItem.id ? { ...subscriptionForm, id: editingItem.id } : s));
+            } else {
+              setSubscriptions([...subscriptions, { ...subscriptionForm, id: Date.now() }]);
+            }
+            resetSubscriptionForm();
+          };
+
+          const resetSubscriptionForm = () => {
+            setSubscriptionForm({ clientId: '', description: '', amount: '', startDate: '', status: 'active' });
+            setShowSubscriptionModal(false);
+            setEditingItem(null);
+          };
+
+          const deleteSubscription = (id) => {
+            setSubscriptions(subscriptions.filter(s => s.id !== id));
+          };
+
+          const editSubscription = (subscription) => {
+            setSubscriptionForm(subscription);
+            setEditingItem(subscription);
+            setShowSubscriptionModal(true);
+          };
+
+          // Helper functions
+          const getClientName = (clientId) => {
+            const client = clients.find(c => c.id === parseInt(clientId));
+            return client ? client.companyName : 'Nieznany klient';
+          };
+
+          const getStatusColor = (status) => {
+            const colors = {
+              active: 'bg-green-100 text-green-800',
+              potential: 'bg-yellow-100 text-yellow-800',
+              cold: 'bg-blue-100 text-blue-800',
+              inactive: 'bg-gray-100 text-gray-800'
+            };
+            return colors[status] || colors.potential;
+          };
+
+          const getStatusText = (status) => {
+            const texts = {
+              active: 'Aktywny',
+              potential: 'Potencjalny',
+              cold: 'Cold calling',
+              inactive: 'Nieaktywny'
+            };
+            return texts[status] || 'Potencjalny';
+          };
+
+          // Filter functions
+          const filteredClients = clients.filter(client =>
+            client.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.email.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+
+          const filteredInvoices = invoices.filter(invoice => {
+            const client = clients.find(c => c.id === parseInt(invoice.clientId));
+            const clientName = client ? client.companyName : '';
+            return (
+              invoice.month === selectedMonth &&
+              (clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               invoice.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+          });
+
+          const filteredSubscriptions = subscriptions.filter(subscription => {
+            const client = clients.find(c => c.id === parseInt(subscription.clientId));
+            const clientName = client ? client.companyName : '';
+            return (
+              clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              subscription.description.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          });
+
+          // Statistics
+          const getMonthlyStats = () => {
+            const monthInvoices = invoices.filter(i => i.month === selectedMonth);
+            const sales = monthInvoices.filter(i => i.type === 'sale').reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
+            const purchases = monthInvoices.filter(i => i.type === 'purchase').reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
+            const profit = sales - purchases;
+            
+            return { sales, purchases, profit };
+          };
+
+          const stats = getMonthlyStats();
+
+          // Export/Import functions
+          const exportData = () => {
+            const data = {
+              clients,
+              invoices,
+              subscriptions,
+              exportDate: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `crm_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const importData = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                try {
+                  const data = JSON.parse(e.target.result);
+                  if (data.clients) setClients(data.clients);
+                  if (data.invoices) setInvoices(data.invoices);
+                  if (data.subscriptions) setSubscriptions(data.subscriptions);
+                  alert('Dane zostały pomyślnie zaimportowane!');
+                } catch (error) {
+                  alert('Błąd podczas importowania danych!');
+                }
+              };
+              reader.readAsText(file);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50">
+              {/* Header */}
+              <header className="bg-white shadow-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                  <div className="flex justify-between items-center">
+                    <h1 className="text-2xl font-bold text-gray-900">System CRM</h1>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={exportData}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        <Download size={16} />
+                        Eksport
+                      </button>
+                      <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer">
+                        <Upload size={16} />
+                        Import
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={importData}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              {/* Navigation */}
+              <nav className="bg-white shadow-sm">
+                <div className="max-w-7xl mx-auto px-4">
+                  <div className="flex space-x-8">
+                    {[
+                      { id: 'clients', label: 'Klienci', icon: Users },
+                      { id: 'invoices', label: 'Faktury', icon: FileText },
+                      { id: 'subscriptions', label: 'Stałe zlecenia', icon: Repeat },
+                      { id: 'stats', label: 'Statystyki', icon: BarChart3 }
+                    ].map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => setActiveTab(id)}
+                        className={`flex items-center gap-2 px-4 py-4 border-b-2 font-medium ${
+                          activeTab === id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        <Icon size={18} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </nav>
+
+              {/* Main Content */}
+              <main className="max-w-7xl mx-auto px-4 py-8">
+                {/* Search and Filters */}
+                <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Szukaj..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  {activeTab === 'invoices' && (
+                    <div className="flex gap-2">
+                      <input
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+                  
+                  {activeTab !== 'stats' && (
+                    <button
+                      onClick={() => {
+                        if (activeTab === 'clients') setShowClientModal(true);
+                        else if (activeTab === 'invoices') setShowInvoiceModal(true);
+                        else if (activeTab === 'subscriptions') setShowSubscriptionModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Plus size={16} />
+                      Dodaj
+                    </button>
+                  )}
+                </div>
+
+                {/* Clients Tab */}
+                {activeTab === 'clients' && (
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Firma</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kontakt</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akcje</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredClients.map((client) => (
+                            <tr key={client.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{client.companyName}</div>
+                                <div className="text-sm text-gray-500">{client.nip}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.contactPerson}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.email}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(client.status)}`}>
+                                  {getStatusText(client.status)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => editClient(client)}
+                                  className="text-blue-600 hover:text-blue-900 mr-4"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => deleteClient(client.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Invoices Tab */}
+                {activeTab === 'invoices' && (
+                  <div className="space-y-6">
+                    {/* Monthly Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <DollarSign className="h-6 w-6 text-green-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Sprzedaż</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.sales.toFixed(2)} zł</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-red-100 rounded-lg">
+                            <DollarSign className="h-6 w-6 text-red-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Zakup</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.purchases.toFixed(2)} zł</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <BarChart3 className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Zysk</p>
+                            <p className={`text-2xl font-bold ${stats.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {stats.profit.toFixed(2)} zł
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Invoices Table */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klient</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opis</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kwota</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akcje</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredInvoices.map((invoice) => (
+                              <tr key={invoice.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.date}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getClientName(invoice.clientId)}</td>
+                                <td className="px-6 py-4 text-sm text-gray-900">{invoice.description}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    invoice.type === 'sale' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {invoice.type === 'sale' ? 'Sprzedaż' : 'Zakup'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {parseFloat(invoice.amount).toFixed(2)} zł
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <button
+                                    onClick={() => editInvoice(invoice)}
+                                    className="text-blue-600 hover:text-blue-900 mr-4"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteInvoice(invoice.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subscriptions Tab */}
+                {activeTab === 'subscriptions' && (
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Klient</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opis</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kwota</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data rozpoczęcia</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akcje</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredSubscriptions.map((subscription) => (
+                            <tr key={subscription.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getClientName(subscription.clientId)}</td>
+                              <td className="px-6 py-4 text-sm text-gray-900">{subscription.description}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {parseFloat(subscription.amount).toFixed(2)} zł/miesiąc
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subscription.startDate}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  subscription.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {subscription.status === 'active' ? 'Aktywne' : 'Nieaktywne'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => editSubscription(subscription)}
+                                  className="text-blue-600 hover:text-blue-900 mr-4"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => deleteSubscription(subscription.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Statistics Tab */}
+                {activeTab === 'stats' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <Users className="h-8 w-8 text-blue-600" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Klienci</p>
+                            <p className="text-2xl font-bold text-gray-900">{clients.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <FileText className="h-8 w-8 text-green-600" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Faktury</p>
+                            <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <Repeat className="h-8 w-8 text-purple-600" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Stałe zlecenia</p>
+                            <p className="text-2xl font-bold text-gray-900">{subscriptions.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-lg shadow">
+                        <div className="flex items-center">
+                          <DollarSign className="h-8 w-8 text-yellow-600" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Miesięczny abonament</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {subscriptions.filter(s => s.status === 'active').reduce((sum, s) => sum + parseFloat(s.amount || 0), 0).toFixed(2)} zł
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </main>
+
+              {/* Client Modal */}
+              {showClientModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {editingItem ? 'Edytuj klienta' : 'Dodaj klienta'}
+                    </h3>
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        placeholder="Nazwa firmy"
+                        value={clientForm.companyName}
+                        onChange={(e) => setClientForm({...clientForm, companyName: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Osoba kontaktowa"
+                        value={clientForm.contactPerson}
+                        onChange={(e) => setClientForm({...clientForm, contactPerson: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Telefon"
+                        value={clientForm.phone}
+                        onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={clientForm.email}
+                        onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Adres"
+                        value={clientForm.address}
+                        onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="NIP"
+                        value={clientForm.nip}
+                        onChange={(e) => setClientForm({...clientForm, nip: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <textarea
+                        placeholder="Uwagi"
+                        value={clientForm.notes}
+                        onChange={(e) => setClientForm({...clientForm, notes: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows="3"
+                      />
+                      <select
+                        value={clientForm.status}
+                        onChange={(e) => setClientForm({...clientForm, status: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="potential">Potencjalny</option>
+                        <option value="active">Aktywny</option>
+                        <option value="cold">Cold calling</option>
+                        <option value="inactive">Nieaktywny</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-6">
+                      <button
+                        onClick={resetClientForm}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      >
+                        Anuluj
+                      </button>
+                      <button
+                        onClick={saveClient}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        {editingItem ? 'Zapisz' : 'Dodaj'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Invoice Modal */}
+              {showInvoiceModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {editingItem ? 'Edytuj fakturę' : 'Dodaj fakturę'}
+                    </h3>
+                    <div className="space-y-4">
+                      <select
+                        value={invoiceForm.clientId}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, clientId: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Wybierz klienta</option>
+                        {clients.map(client => (
+                          <option key={client.id} value={client.id}>{client.companyName}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={invoiceForm.type}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, type: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="sale">Sprzedaż</option>
+                        <option value="purchase">Zakup</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Kwota"
+                        value={invoiceForm.amount}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="date"
+                        value={invoiceForm.date}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, date: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="month"
+                        value={invoiceForm.month}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, month: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <textarea
+                        placeholder="Opis faktury"
+                        value={invoiceForm.description}
+                        onChange={(e) => setInvoiceForm({...invoiceForm, description: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows="3"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-6">
+                      <button
+                        onClick={resetInvoiceForm}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      >
+                        Anuluj
+                      </button>
+                      <button
+                        onClick={saveInvoice}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        {editingItem ? 'Zapisz' : 'Dodaj'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subscription Modal */}
+              {showSubscriptionModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {editingItem ? 'Edytuj stałe zlecenie' : 'Dodaj stałe zlecenie'}
+                    </h3>
+                    <div className="space-y-4">
+                      <select
+                        value={subscriptionForm.clientId}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, clientId: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Wybierz klienta</option>
+                        {clients.map(client => (
+                          <option key={client.id} value={client.id}>{client.companyName}</option>
+                        ))}
+                      </select>
+                      <textarea
+                        placeholder="Opis zlecenia"
+                        value={subscriptionForm.description}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, description: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows="3"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Kwota miesięczna"
+                        value={subscriptionForm.amount}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, amount: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="date"
+                        value={subscriptionForm.startDate}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, startDate: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <select
+                        value={subscriptionForm.status}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, status: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="active">Aktywne</option>
+                        <option value="inactive">Nieaktywne</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-6">
+                      <button
+                        onClick={resetSubscriptionForm}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                      >
+                        Anuluj
+                      </button>
+                      <button
+                        onClick={saveSubscription}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        {editingItem ? 'Zapisz' : 'Dodaj'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        ReactDOM.render(<CRMSystem />, document.getElementById('root'));
+    </script>
+</body>
+</html>
